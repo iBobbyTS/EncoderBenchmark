@@ -1,0 +1,116 @@
+{
+  "ffmpeg_path": "",
+  "threads": 8,
+  "source_videos_dir": "source_videos",
+  "output_root": "results",
+  "vmaf_model": "",
+  "dry_run": false,
+  "debug_encoder_check": false,
+  "run_encoders": ["hevc_videotoolbox"],
+  "threading_rules": {
+    "libx265": ["-x265-params", "pools={threads}"],
+    "libaom-av1": ["-cpu-used", "{threads}"],
+    "libsvtav1": ["-svtav1-params", "lp=2"]
+  },
+
+  "encoders": {
+    "software_encoders": ["libaom-av1", "librav1e", "libsvtav1", "libx265"],
+    "macos_encoders":    ["hevc_videotoolbox"],
+    "nvidia_encoders":   ["hevc_nvenc", "av1_nvenc"],
+    "amd_encoders":      [],
+    "intel_encoders":    []
+  },
+
+  "step1": {
+    "presets": {
+      "libx265": {
+        "method": "preset",
+        "name": "preset",
+        "values": ["placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast"],
+        "additional_params": ["-vtag", "hvc1"]
+      },
+      "hevc_videotoolbox": {
+        "method": "parm",
+        "params": [[], ["-realtime", "1"]],
+        "additional_params": ["-vtag", "hvc1"]
+      },
+      "libaom-av1": {
+        "method": "preset",
+        "name": "usage",
+        "values": ["good", "realtime"]
+      },
+      "librav1e": {
+        "method": "preset",
+        "name": "speed",
+        "values": [0,1,2,3,4,5,6,7,8,9,10]
+      },
+      "libsvtav1": {
+        "method": "preset",
+        "name": "preset",
+        "values": [0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+      },
+      "hevc_nvenc": {
+        "method": "preset",
+        "name": "preset",
+        "values": ["p1","p2","p3","p4","p5","p6","p7"]
+      },
+      "av1_nvenc": {
+        "method": "preset",
+        "name": "preset",
+        "values": ["p1","p2","p3","p4","p5","p6","p7"]
+      }
+    }
+  },
+
+  "step3": {
+    "quality_controls": {
+      "target_vmafs": [90,95,99],
+      "libx265": {
+        "quality_param": "crf",
+        "min_quality": 0,
+        "max_quality": 51,
+        "higher_quality_when": "value_lower",
+        "additional_params": ["-vtag", "hvc1"]
+      },
+      "librav1e": {
+        "quality_param": "qp",
+        "min_quality": 0,
+        "max_quality": 255,
+        "higher_quality_when": "value_lower"
+      },
+      "libaom-av1": {
+        "quality_param": "crf",
+        "min_quality": 0,
+        "max_quality": 63,
+        "higher_quality_when": "value_lower"
+      },
+      "libsvtav1": {
+        "quality_param": "crf",
+        "min_quality": 0,
+        "max_quality": 63,
+        "higher_quality_when": "value_lower"
+      },
+      "hevc_nvenc": {
+        "quality_param": "qp",
+        "min_quality": 0,
+        "max_quality": 51,
+        "higher_quality_when": "value_lower",
+        "additional_params": ["-multipass", "2", "-preset", "p7"]
+      },
+      "av1_nvenc": {
+        "quality_param": "qp",
+        "min_quality": 0,
+        "max_quality": 51,
+        "higher_quality_when": "value_lower",
+        "additional_params": ["-multipass", "2", "-preset", "p7"]
+      },
+      "hevc_videotoolbox": {
+        "quality_param": "q:v",
+        "min_quality": 1,
+        "max_quality": 100,
+        "higher_quality_when": "value_higher",
+        "additional_params": ["-vtag", "hvc1"]
+      }
+    }
+  }
+} 

@@ -1,0 +1,4 @@
+pydantic>=2.6
+rich>=13.7
+tqdm>=4.66
+orjson>=3.9 
