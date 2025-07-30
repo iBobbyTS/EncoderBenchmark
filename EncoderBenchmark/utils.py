@@ -8,14 +8,11 @@ CONFIG_CACHE: Dict[str, Any] | None = None
 
 
 def load_config(path: str | Path = "config.json") -> Dict[str, Any]:
-    """Load JSON config once and cache it."""
-    global CONFIG_CACHE
-    if CONFIG_CACHE is None:
-        cfg_path = Path(path)
-        print(path)
-        with cfg_path.open("r", encoding="utf-8") as f:
-            CONFIG_CACHE = json.load(f)
-    return CONFIG_CACHE  # type: ignore[return-value]
+    """Load JSON config file."""
+    cfg_path = Path(path)
+    print(path)
+    with cfg_path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def ensure_dir(path: str | Path) -> Path:
