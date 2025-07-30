@@ -1,16 +1,15 @@
 {
   "ffmpeg_path": "",
-  "threads": 8,
+  "threads": 20,
   "source_videos_dir": "source_videos",
   "output_root": "results",
   "vmaf_model": "",
   "dry_run": false,
   "debug_encoder_check": false,
-  "run_encoders": ["hevc_videotoolbox"],
+  "run_encoders": ["av1_nvenc", "hevc_nvenc", "libx265", "libaom-av1", "libsvtav1"],
   "threading_rules": {
     "libx265": ["-x265-params", "pools={threads}"],
-    "libaom-av1": ["-cpu-used", "{threads}"],
-    "libsvtav1": ["-svtav1-params", "lp=2"]
+    "libaom-av1": ["-cpu-used", "{threads}"]
   },
 
   "encoders": {
