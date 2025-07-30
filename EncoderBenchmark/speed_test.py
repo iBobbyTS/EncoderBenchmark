@@ -88,40 +88,32 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
             continue
             
         for video in videos:
-            if rule["method"] == "preset":
-                for preset in rule["values"]:
+            for preset in rule["values"]:
+                if rule["method"] == "preset":
                     out_name = f"{video.stem}_{enc_name}_{rule['name']}_{preset}.mp4"
                     task = EncoderTask(
                         src=video,
                         dst=out_root / out_name,
                         encoder=enc_name,
-                        preset=preset,
+                        preset=['-'+rule['name'], preset],
                         extra_args=rule.get("additional_params", [])
                     )
-                    
-                    if is_done(video, "step1", task):
-                        continue
-                        
-                    metrics = runner.run(task)
-                    if not dry_run:
-                        _append_result(general_config, video.name, "step1", task, metrics)
-                        
-            elif rule["method"] == "parm":
-                for i, plist in enumerate(rule["params"]):
-                    out_name = f"{video.stem}_{enc_name}_mode_{i}.mp4"
+                elif rule["method"] == "parm":
+                    out_name = f"{video.stem}_{enc_name}_{'-'.join(preset)}.mp4"
                     task = EncoderTask(
                         src=video,
                         dst=out_root / out_name,
                         encoder=enc_name,
-                        extra_args=plist + rule.get("additional_params", [])
+                        extra_args=preset + rule.get("additional_params", [])
                     )
-                    
-                    if is_done(video, "step1", task):
-                        continue
-                        
-                    metrics = runner.run(task)
-                    if not dry_run:
-                        _append_result(general_config, video.name, "step1", task, metrics)
+                else:
+                    print(f"[Skip] Unsupported method {rule['method']} for encoder {enc_name}")
+                    continue
+                if is_done(video, "step1", task):
+                    continue
+                metrics = runner.run(task)
+                if not dry_run:
+                    _append_result(general_config, video.name, "step1", task, metrics)
 
 
 def main():

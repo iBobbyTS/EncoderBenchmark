@@ -19,7 +19,7 @@ class EncoderTask:
     src: Path
     dst: Path
     encoder: str
-    preset: Optional[str] = None
+    preset: Optional[list[str]] = None
     qparam_name: Optional[str] = None
     qvalue: Optional[int] = None
     extra_args: Optional[list[str]] = None  # for custom parameters
@@ -79,18 +79,13 @@ class EncoderRunner:
         if task.qparam_name and task.qvalue is not None:
             quality_args = [f"-{task.qparam_name}", str(task.qvalue)]
 
-        preset_args: List[str] = []
-        if task.preset is not None:
-            # 通用 preset 参数：-preset xxx；如需特例，外层生成 task 时处理
-            preset_args = ["-preset", str(task.preset)]
-
         cmd = [
             self.ffmpeg,
             "-y",  # overwrite
             "-i", str(task.src),
             "-map", "v",  # only map video streams, skip audio
             "-c:v", task.encoder,
-            *preset_args,
+            *task.preset,
             *quality_args,
         ]
 
