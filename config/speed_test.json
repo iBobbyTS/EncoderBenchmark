@@ -16,9 +16,13 @@
       "values": ["placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast"],
       "additional_params": ["-vtag", "hvc1"]
     },
+    "h264_videotoolbox": {
+      "method": "parm",
+      "values": [[]]
+    },
     "hevc_videotoolbox": {
       "method": "parm",
-      "params": [[], ["-realtime", "1"]],
+      "values": [[]],
       "additional_params": ["-vtag", "hvc1"]
     },
     "libaom-av1": {

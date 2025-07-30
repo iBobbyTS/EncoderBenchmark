@@ -6,14 +6,14 @@
   "vmaf_model": "model=version=vmaf_4k_v0.6.1",
   "dry_run": false,
   "debug_encoder_check": false,
-  "run_encoders": ["h264_nvenc", "hevc_nvenc", "av1_nvenc", "libx265", "libx264", "libaom-av1", "libsvtav1"],
+  "run_encoders": ["h264_videotoolbox", "hevc_videotoolbox"],
   "threading_rules": {
     "libx264": ["-x264-params", "threads={threads}"],
     "libx265": ["-x265-params", "pools={threads}"],
     "libaom-av1": ["-cpu-used", "{threads}"]
   },
   "pix_fmt_downsample": {
-    "yuv444p12le": ["yuv444p12le", "yuv422p10le", "yuv420p10le"],
+    "yuv444p12le": ["yuv444p12le", "yuv422p10le", "yuv420p10le", "yuv420p"],
     "yuv444p": ["yuv444p", "yuv420p"]
   },
   "avaliable_pixfmt": {

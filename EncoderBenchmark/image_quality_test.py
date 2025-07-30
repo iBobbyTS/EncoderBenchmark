@@ -5,17 +5,19 @@ Tests quality parameters to find closest VMAF to target values
 
 import json
 from pathlib import Path
-from typing import Dict, Any, List
-from .encoder_runner import EncoderRunner, EncoderTask
-from .utils import encoder_available, load_config
+from typing import Dict, Any
+from EncoderBenchmark.encoder_runner import EncoderRunner, EncoderTask
+from EncoderBenchmark.utils import encoder_available, load_config, find_usable_pixfmts
 
 
-def _search_multi_targets(runner: EncoderRunner, video: Path, out_root: Path, enc_name: str,
-                          qcfg: dict, targets: list[float], dry: bool):
+def _search_multi_targets(
+        runner: EncoderRunner, video: Path, out_root: Path, enc_name: str,
+        pix_fmt: str, qcfg: dict, targets: list[float], dry: bool
+):
     """New search algorithm: start from worst quality, step by 5, refine when crossing targets."""
     min_q = qcfg["min_quality"]
     max_q = qcfg["max_quality"]
-    higher_is_better = qcfg["higher_quality_when"] == "value_higher"
+    higher_is_better = not qcfg["higher_quality_lower_value"]
     
     # 1. 从低画质开始
     start_q = min_q if higher_is_better else max_q
@@ -41,12 +43,15 @@ def _search_multi_targets(runner: EncoderRunner, video: Path, out_root: Path, en
             
         # 编码并计算VMAF
         out_name = f"{video.stem}_{enc_name}_{qcfg['quality_param']}_{cur_q}.mp4"
-        task = EncoderTask(src=video,
-                           dst=out_root / out_name,
-                           encoder=enc_name,
-                           qparam_name=qcfg["quality_param"],
-                           qvalue=cur_q,
-                           extra_args=qcfg.get("additional_params"))
+        task = EncoderTask(
+            src=video,
+            dst=out_root / out_name,
+            encoder=enc_name,
+            pix_fmt=pix_fmt,
+            qparam_name=qcfg["quality_param"],
+            qvalue=cur_q,
+            extra_args=qcfg.get("additional_params")
+        )
         if dry:
             runner.run(task)
             return {}
@@ -57,7 +62,7 @@ def _search_multi_targets(runner: EncoderRunner, video: Path, out_root: Path, en
         
         # 检查是否超过当前最低目标
         if vmaf >= remaining_targets[0]:
-            target_reached = remaining_targets.pop(0)  # 移除已达到的目标
+            remaining_targets.pop(0)  # 移除已达到的目标
             
             # 往回细扫：从上一个粗扫点的下一步开始到当前点的前一步
             prev_coarse_q = cur_q - step_direction  # 上一个粗扫点
@@ -78,12 +83,15 @@ def _search_multi_targets(runner: EncoderRunner, video: Path, out_root: Path, en
                     continue
                     
                 r_name = f"{video.stem}_{enc_name}_{qcfg['quality_param']}_{refine_q}.mp4"
-                r_task = EncoderTask(src=video,
-                                     dst=out_root / r_name,
-                                     encoder=enc_name,
-                                     qparam_name=qcfg["quality_param"],
-                                     qvalue=refine_q,
-                                     extra_args=qcfg.get("additional_params"))
+                r_task = EncoderTask(
+                    src=video,
+                    dst=out_root / r_name,
+                    encoder=enc_name,
+                    pix_fmt=pix_fmt,
+                    qparam_name=qcfg["quality_param"],
+                    qvalue=refine_q,
+                    extra_args=qcfg.get("additional_params")
+                )
                 if dry:
                     runner.run(r_task)
                     continue
@@ -165,7 +173,7 @@ def run_image_quality_test(general_config: Dict[str, Any], quality_config: Dict[
                 for line in f:
                     data = json.loads(line.strip())
                     if data.get("step") == "step3":
-                        key = (data["encoder"], data.get("vmaf_target"))
+                        key = (data["encoder"], data.get("pix_fmt"), data.get("vmaf_target"))
                         done_cache["step3"].add(key)
         return done_cache
     
@@ -178,6 +186,7 @@ def run_image_quality_test(general_config: Dict[str, Any], quality_config: Dict[
             "param": task.qparam_name,
             "q": task.qvalue,
             "step": step,
+            "pix_fmt": task.pix_fmt,
             **metrics
         }
         with open(result_file, 'a') as f:
@@ -200,22 +209,25 @@ def run_image_quality_test(general_config: Dict[str, Any], quality_config: Dict[
             continue
             
         for video in videos:
-            # 检查哪些target已经完成
-            video_step3_done = load_done(video)["step3"]
-            remaining_targets = [t for t in targets if (enc_name, t) not in video_step3_done]
-            
-            if not remaining_targets:
-                print(f"[Skip] {video.name} + {enc_name} all targets already completed")
-                continue
-                
-            best_dict = _search_multi_targets(runner, video, out_root,
-                                              enc_name, qcfg, remaining_targets, dry_run)
-            if dry_run:
-                continue
-            # write results
-            for tv, (task, metrics) in best_dict.items():
-                _append_result(general_config, video.name, "step3", task,
-                               metrics | {"vmaf_target": tv})
+            target_pix_fmts = find_usable_pixfmts(video, enc_name)
+            for pix_fmt in target_pix_fmts:
+                # 检查哪些target已经完成
+                video_step3_done = load_done(video)["step3"]
+                remaining_targets = [t for t in targets if (enc_name, pix_fmt, t) not in video_step3_done]
+
+                if not remaining_targets:
+                    print(f"[Skip] {video.name} + {enc_name} all targets already completed")
+                    continue
+
+                best_dict = _search_multi_targets(
+                    runner, video, out_root, pix_fmt, enc_name, qcfg, remaining_targets, dry_run
+                )
+                if dry_run:
+                    continue
+                # write results
+                for tv, (task, metrics) in best_dict.items():
+                    _append_result(general_config, video.name, "step3", task,
+                                   metrics | {"vmaf_target": tv})
 
 
 def main():
@@ -233,4 +245,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

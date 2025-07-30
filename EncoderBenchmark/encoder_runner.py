@@ -6,12 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from EncoderBenchmark.utils import load_config, ensure_dir
-
-
-def _run_subprocess(cmd: List[str]) -> subprocess.CompletedProcess[str]:
-    """Wrapper for subprocess.run with common flags."""
-    return subprocess.run(cmd, capture_output=True, text=True, check=False)
+from EncoderBenchmark.utils import ensure_dir, _run_subprocess
 
 
 @dataclass
@@ -19,6 +14,7 @@ class EncoderTask:
     src: Path
     dst: Path
     encoder: str
+    pix_fmt: str
     preset: Optional[list[str]] = None
     qparam_name: Optional[str] = None
     qvalue: Optional[int] = None
@@ -36,7 +32,7 @@ class EncoderRunner:
         else:
             self.ffmpeg = str(Path(raw_path) / "ffmpeg")
             self.ffprobe = str(Path(raw_path) / "ffprobe")
-        self.threads = str(cfg.get("threads", 0))
+        self.threads = cfg.get("threads", 0)
         self.thread_rules: dict[str, list[str]] = cfg.get("threading_rules", {})
         self.dry_run = False  # 外部设置
 
@@ -78,28 +74,23 @@ class EncoderRunner:
         quality_args: List[str] = []
         if task.qparam_name and task.qvalue is not None:
             quality_args = [f"-{task.qparam_name}", str(task.qvalue)]
-
         cmd = [
             self.ffmpeg,
             "-y",  # overwrite
             "-i", str(task.src),
+            "-pix_fmt", task.pix_fmt,  # set pixel format
             "-map", "v",  # only map video streams, skip audio
             "-c:v", task.encoder,
-            *task.preset,
+            *(task.preset if task.preset is not None else []),  # add preset if provided
             *quality_args,
         ]
 
         # threading parameters
-        hw_keywords = ("_nvenc", "videotoolbox", "vaapi", "qsv")
         if task.encoder in self.thread_rules:
             t_val = self.threads
             if task.encoder == "libaom-av1":
-                try:
-                    t_int = int(self.threads)
-                    t_val = str(min(t_int, 8))
-                except ValueError:
-                    t_val = "8"
-            custom = [arg.format(d=t_val, threads=t_val) for arg in self.thread_rules[task.encoder]]
+                t_val = min(t_val, 8)
+            custom = [self.thread_rules[task.encoder][0], self.thread_rules[task.encoder][1].format(threads=t_val)]
             cmd += custom
 
         cmd.append(str(out_dir / task.dst.name))
@@ -209,4 +200,4 @@ class EncoderRunner:
         ]
         res = _run_subprocess(cmd)
         pix = res.stdout.strip()
-        return pix or "yuv420p"
+        return pix

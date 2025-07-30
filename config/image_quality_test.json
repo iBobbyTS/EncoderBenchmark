@@ -5,46 +5,52 @@
       "quality_param": "crf",
       "min_quality": 0,
       "max_quality": 51,
-      "higher_quality_when": "value_lower",
+      "higher_quality_lower_value": true,
       "additional_params": ["-vtag", "hvc1"]
     },
     "librav1e": {
       "quality_param": "qp",
       "min_quality": 0,
       "max_quality": 255,
-      "higher_quality_when": "value_lower"
+      "higher_quality_lower_value": true
     },
     "libaom-av1": {
       "quality_param": "crf",
       "min_quality": 0,
       "max_quality": 63,
-      "higher_quality_when": "value_lower"
+      "higher_quality_lower_value": true
     },
     "libsvtav1": {
       "quality_param": "crf",
       "min_quality": 0,
       "max_quality": 63,
-      "higher_quality_when": "value_lower"
+      "higher_quality_lower_value": true
     },
     "hevc_nvenc": {
       "quality_param": "qp",
       "min_quality": 0,
       "max_quality": 51,
-      "higher_quality_when": "value_lower",
+      "higher_quality_lower_value": true,
       "additional_params": ["-multipass", "2", "-preset", "p7"]
     },
     "av1_nvenc": {
       "quality_param": "qp",
       "min_quality": 0,
       "max_quality": 51,
-      "higher_quality_when": "value_lower",
+      "higher_quality_lower_value": true,
       "additional_params": ["-multipass", "2", "-preset", "p7"]
+    },
+    "h264_videotoolbox": {
+      "quality_param": "q:v",
+      "min_quality": 1,
+      "max_quality": 100,
+      "higher_quality_lower_value": false
     },
     "hevc_videotoolbox": {
       "quality_param": "q:v",
       "min_quality": 1,
       "max_quality": 100,
-      "higher_quality_when": "value_higher",
+      "higher_quality_lower_value": false,
       "additional_params": ["-vtag", "hvc1"]
     }
   }

@@ -5,9 +5,9 @@ Tests different presets/speeds for each encoder
 
 import json
 from pathlib import Path
-from typing import Dict, Any, List
-from .encoder_runner import EncoderRunner, EncoderTask
-from .utils import encoder_available, load_config
+from typing import Dict, Any
+from EncoderBenchmark.encoder_runner import EncoderRunner, EncoderTask
+from EncoderBenchmark.utils import encoder_available, load_config, find_usable_pixfmts
 
 
 def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any], 
@@ -47,14 +47,14 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
                 for line in f:
                     data = json.loads(line.strip())
                     if data.get("step") == "step1":
-                        key = (data["encoder"], data.get("preset"), data.get("param"), data.get("q"))
+                        key = (data["encoder"], data.get("preset"), data.get("param"), data.get("q"), data.get("pix_fmt"))
                         done_cache["step1"].add(key)
         return done_cache
     
     def is_done(video: Path, step: str, task: EncoderTask):
         done_cache = load_done(video)
         if step == "step1":
-            key = (task.encoder, task.preset, task.qparam_name, task.qvalue)
+            key = (task.encoder, task.preset, task.qparam_name, task.qvalue, task.pix_fmt)
             return key in done_cache["step1"]
         return False
     
@@ -67,6 +67,7 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
             "param": task.qparam_name,
             "q": task.qvalue,
             "step": step,
+            "pix_fmt": task.pix_fmt,
             **metrics
         }
         with open(result_file, 'a') as f:
@@ -86,34 +87,37 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
         if not encoder_available(enc_name, runner.ffmpeg, debug=debug_enc):
             print(f"[Skip] encoder {enc_name} not available")
             continue
-            
         for video in videos:
-            for preset in rule["values"]:
-                if rule["method"] == "preset":
-                    out_name = f"{video.stem}_{enc_name}_{rule['name']}_{preset}.mp4"
-                    task = EncoderTask(
-                        src=video,
-                        dst=out_root / out_name,
-                        encoder=enc_name,
-                        preset=['-'+rule['name'], preset],
-                        extra_args=rule.get("additional_params", [])
-                    )
-                elif rule["method"] == "parm":
-                    out_name = f"{video.stem}_{enc_name}_{'-'.join(preset)}.mp4"
-                    task = EncoderTask(
-                        src=video,
-                        dst=out_root / out_name,
-                        encoder=enc_name,
-                        extra_args=preset + rule.get("additional_params", [])
-                    )
-                else:
-                    print(f"[Skip] Unsupported method {rule['method']} for encoder {enc_name}")
-                    continue
-                if is_done(video, "step1", task):
-                    continue
-                metrics = runner.run(task)
-                if not dry_run:
-                    _append_result(general_config, video.name, "step1", task, metrics)
+            target_pix_fmts = find_usable_pixfmts(video, enc_name)
+            for pix_fmt in target_pix_fmts:
+                for preset in rule["values"]:
+                    if rule["method"] == "preset":
+                        out_name = f"{video.stem}_{enc_name}_{rule['name']}_{preset}_{pix_fmt}.mp4"
+                        task = EncoderTask(
+                            src=video,
+                            dst=out_root / out_name,
+                            pix_fmt=pix_fmt,
+                            encoder=enc_name,
+                            preset=['-'+rule['name'], preset],
+                            extra_args=rule.get("additional_params", [])
+                        )
+                    elif rule["method"] == "parm":
+                        out_name = f"{video.stem}_{enc_name}_{'-'.join(preset)}_{pix_fmt}.mp4"
+                        task = EncoderTask(
+                            src=video,
+                            dst=out_root / out_name,
+                            pix_fmt=pix_fmt,
+                            encoder=enc_name,
+                            extra_args=preset + rule.get("additional_params", [])
+                        )
+                    else:
+                        print(f"[Skip] Unsupported method {rule['method']} for encoder {enc_name}")
+                        continue
+                    if is_done(video, "step1", task):
+                        continue
+                    metrics = runner.run(task)
+                    if not dry_run:
+                        _append_result(general_config, video.name, "step1", task, metrics)
 
 
 def main():
@@ -131,4 +135,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()
