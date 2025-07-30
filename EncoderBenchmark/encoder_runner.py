@@ -164,7 +164,7 @@ class EncoderRunner:
         t = self.threads
         base = f"n_threads={t}"
         if cfg_model:
-            filter_opts = f"{base}:model_path={cfg_model}"
+            filter_opts = f"{base}:{cfg_model}"
         else:
             filter_opts = base
 
@@ -215,5 +215,3 @@ class EncoderRunner:
         res = _run_subprocess(cmd)
         pix = res.stdout.strip()
         return pix or "yuv420p"
-
-    # PSNR removed as per latest requirements 
