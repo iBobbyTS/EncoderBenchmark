@@ -3,13 +3,30 @@
   "threads": 20,
   "source_videos_dir": "source_videos",
   "output_root": "results",
-  "vmaf_model": "",
+  "vmaf_model": "model=version=vmaf_4k_v0.6.1",
   "dry_run": false,
   "debug_encoder_check": false,
-  "run_encoders": ["av1_nvenc", "hevc_nvenc", "libx265", "libaom-av1", "libsvtav1"],
+  "run_encoders": ["h264_nvenc", "hevc_nvenc", "av1_nvenc", "libx265", "libx264", "libaom-av1", "libsvtav1"],
   "threading_rules": {
+    "libx264": ["-x264-params", "threads={threads}"],
     "libx265": ["-x265-params", "pools={threads}"],
     "libaom-av1": ["-cpu-used", "{threads}"]
+  },
+  "pix_fmt_downsample": {
+    "yuv444p12le": ["yuv444p12le", "yuv422p10le", "yuv420p10le"],
+    "yuv444p": ["yuv444p", "yuv420p"]
+  },
+  "avaliable_pixfmt": {
+    "libx264": ["yuv422p10le", "yuv420p10le", "yuv444p", "yuv420p"],
+    "libx265": ["yuv444p12le", "yuv422p10le", "yuv420p10le", "yuv444p", "yuv420p"],
+    "libaom-av1": ["yuv444p12le", "yuv422p10le", "yuv420p10le", "yuv444p", "yuv420p"],
+    "libsvtav1": ["yuv420p10le", "yuv420p"],
+    "librav1e": ["yuv444p12le", "yuv422p10le", "yuv420p10le", "yuv444p", "yuv420p"],
+    "h264_nvenc": ["yuv444p", "yuv420p"],
+    "hevc_nvenc": ["yuv444p12le", "yuv420p10le", "yuv444p", "yuv420p"],
+    "av1_nvenc": ["yuv420p10le", "yuv420p"],
+    "h264_videotoolbox": ["yuv420p"],
+    "hevc_videotoolbox": ["yuv420p10le", "yuv420p"]
   },
 
   "encoders": {
@@ -22,6 +39,16 @@
 
   "step1": {
     "presets": {
+      "hevc_nvenc": {
+        "method": "preset",
+        "name": "preset",
+        "values": ["p1","p2","p3","p4","p5","p6","p7"]
+      },
+      "av1_nvenc": {
+        "method": "preset",
+        "name": "preset",
+        "values": ["p1","p2","p3","p4","p5","p6","p7"]
+      },
       "libx265": {
         "method": "preset",
         "name": "preset",
@@ -47,16 +74,6 @@
         "method": "preset",
         "name": "preset",
         "values": [0,1,2,3,4,5,6,7,8,9,10,11,12,13]
-      },
-      "hevc_nvenc": {
-        "method": "preset",
-        "name": "preset",
-        "values": ["p1","p2","p3","p4","p5","p6","p7"]
-      },
-      "av1_nvenc": {
-        "method": "preset",
-        "name": "preset",
-        "values": ["p1","p2","p3","p4","p5","p6","p7"]
       }
     }
   },
