@@ -55,13 +55,6 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
                     done_cache["speed_test"].add(key)
         return done_cache
 
-    def is_done(video: Path, step: str, task: EncoderTask):
-        done_cache = load_done(video)
-        if step == "speed_test":
-            key = (task.encoder, tuple(task.preset or []), task.pix_fmt)
-            return key in done_cache["speed_test"]
-        return False
-
     def _append_result(cfg: Dict[str, Any], src_name: str, step: str, task: EncoderTask, metrics: Dict[str, Any]):
         result_file = out_root / f"{src_name}_speed_test.jsonl"
         result = {
@@ -89,7 +82,6 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
             print(f"[Skip] encoder {enc_name} not available")
             continue
         for video in videos:
-            # Log tasks already completed for this video
             done_keys = load_done(video)["speed_test"]
             target_pix_fmts = find_usable_pixfmts(video, enc_name)
             for pix_fmt in target_pix_fmts:
@@ -116,9 +108,9 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
                     else:
                         print(f"[Skip] Unsupported method {rule['method']} for encoder {enc_name}")
                         continue
-                    # Skip if already done
-                    if is_done(video, "speed_test", task):
-                        key = (task.encoder, tuple(task.preset or []), task.pix_fmt)
+                    # Skip if already done based on done_keys cache
+                    key = (task.encoder, tuple(task.preset or []), task.pix_fmt)
+                    if key in done_keys:
                         print(f"[SKIP] speed_test already done: {key}")
                         continue
                     metrics = runner.run(task)

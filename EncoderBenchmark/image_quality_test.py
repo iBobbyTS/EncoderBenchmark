@@ -167,15 +167,18 @@ def run_image_quality_test(general_config: Dict[str, Any], quality_config: Dict[
 
     # Load completed tasks
     def load_done(video: Path):
+        # Debug: check load_done invocation
         done_cache = {"quality_test": set()}
-        result_file = out_root / f"{video.stem}_quality_test.jsonl"
+        # match JSONL file naming in _append_result (uses video.name)
+        result_file = out_root / f"{video.name}_quality_test.jsonl"
         if result_file.exists():
-            with open(result_file, 'r') as f:
-                for line in f:
-                    data = json.loads(line.strip())
-                    if data.get("step") == "quality_test":
-                        key = (data["encoder"], data.get("pix_fmt"), data.get("vmaf_target"))
-                        done_cache["quality_test"].add(key)
+             with open(result_file, 'r') as f:
+                 for line in f:
+                     data = json.loads(line.strip())
+                     # filter only quality_test entries
+                     if data.get("step") == "quality_test":
+                         key = (data["encoder"], data.get("pix_fmt"), data.get("vmaf_target"))
+                         done_cache["quality_test"].add(key)
         return done_cache
     
     def _append_result(cfg: Dict[str, Any], src_name: str, task: EncoderTask, metrics: Dict[str, Any], vmaf_target: float):
@@ -211,14 +214,13 @@ def run_image_quality_test(general_config: Dict[str, Any], quality_config: Dict[
             continue
             
         for video in videos:
+            done_keys = load_done(video)["quality_test"]
             target_pix_fmts = find_usable_pixfmts(video, enc_name)
             for pix_fmt in target_pix_fmts:
                 # 检查哪些target已经完成
-                video_done = load_done(video)["quality_test"]
-                remaining_targets = [t for t in targets if (enc_name, pix_fmt, t) not in video_done]
-
+                remaining_targets = [t for t in targets if (enc_name, pix_fmt, t) not in done_keys]
                 if not remaining_targets:
-                    print(f"[Skip] {video.name} + {enc_name} all targets already completed")
+                    print(f"[SKIP] {video.name} + {enc_name} + pix_fmt={pix_fmt} all targets completed: {done_keys}")
                     continue
 
                 best_dict = _search_multi_targets(
