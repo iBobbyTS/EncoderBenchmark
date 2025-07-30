@@ -64,7 +64,8 @@ class EncoderRunner:
             "vmaf": vmaf,
         }
 
-        print(f"RESULT | enc={task.encoder} {task.qparam_name or 'preset'}={task.qvalue or task.preset} vmaf={vmaf:.6f}")
+        # Print combined result with time and bitrate
+        print(f"RESULT: enc={task.encoder} {task.qparam_name or 'preset'}={task.qvalue or task.preset} vmaf={vmaf:.6f} time={elapsed:.3f}s bitrate={bitrate_kbps:.1f}kbps")
         return result
 
     # ---------------- internal -----------------

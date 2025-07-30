@@ -35,38 +35,39 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
         return
     
     # Get output directory
-    out_root = Path(general_config["output_root"])
-    out_root.mkdir(exist_ok=True)
-    
+    base_root = Path(general_config["output_root"])
+    out_root = base_root / "speed_test"
+    out_root.mkdir(parents=True, exist_ok=True)
+
     # Load completed tasks
     def load_done(video: Path):
-        done_cache = {"step1": set()}
-        result_file = out_root / f"{video.stem}_step1.jsonl"
+        done_cache = {"speed_test": set()}
+        # Use full filename with extension to match saved JSONL
+        result_file = out_root / f"{video.name}_speed_test.jsonl"
         if result_file.exists():
             with open(result_file, 'r') as f:
                 for line in f:
                     data = json.loads(line.strip())
-                    if data.get("step") == "step1":
-                        key = (data["encoder"], data.get("preset"), data.get("param"), data.get("q"), data.get("pix_fmt"))
-                        done_cache["step1"].add(key)
+                    # all entries in this file are speed_test results
+                    # Convert null preset to empty list
+                    preset = data.get("preset") or []
+                    key = (data["encoder"], tuple(preset), data.get("pix_fmt"))
+                    done_cache["speed_test"].add(key)
         return done_cache
-    
+
     def is_done(video: Path, step: str, task: EncoderTask):
         done_cache = load_done(video)
-        if step == "step1":
-            key = (task.encoder, task.preset, task.qparam_name, task.qvalue, task.pix_fmt)
-            return key in done_cache["step1"]
+        if step == "speed_test":
+            key = (task.encoder, tuple(task.preset or []), task.pix_fmt)
+            return key in done_cache["speed_test"]
         return False
-    
+
     def _append_result(cfg: Dict[str, Any], src_name: str, step: str, task: EncoderTask, metrics: Dict[str, Any]):
-        result_file = out_root / f"{src_name}_{step}.jsonl"
+        result_file = out_root / f"{src_name}_speed_test.jsonl"
         result = {
             "video": src_name,
             "encoder": task.encoder,
             "preset": task.preset,
-            "param": task.qparam_name,
-            "q": task.qvalue,
-            "step": step,
             "pix_fmt": task.pix_fmt,
             **metrics
         }
@@ -80,7 +81,7 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
     # Get presets configuration
     presets = speed_config["presets"]
     
-    # Run speed tests
+    # Run speed tests (formerly step1)
     for enc_name, rule in presets.items():
         if run_limit and enc_name.lower() not in run_limit:
             continue
@@ -88,6 +89,8 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
             print(f"[Skip] encoder {enc_name} not available")
             continue
         for video in videos:
+            # Log tasks already completed for this video
+            done_keys = load_done(video)["speed_test"]
             target_pix_fmts = find_usable_pixfmts(video, enc_name)
             for pix_fmt in target_pix_fmts:
                 for preset in rule["values"]:
@@ -113,11 +116,14 @@ def run_speed_test(general_config: Dict[str, Any], speed_config: Dict[str, Any],
                     else:
                         print(f"[Skip] Unsupported method {rule['method']} for encoder {enc_name}")
                         continue
-                    if is_done(video, "step1", task):
+                    # Skip if already done
+                    if is_done(video, "speed_test", task):
+                        key = (task.encoder, tuple(task.preset or []), task.pix_fmt)
+                        print(f"[SKIP] speed_test already done: {key}")
                         continue
                     metrics = runner.run(task)
                     if not dry_run:
-                        _append_result(general_config, video.name, "step1", task, metrics)
+                        _append_result(general_config, video.name, "speed_test", task, metrics)
 
 
 def main():

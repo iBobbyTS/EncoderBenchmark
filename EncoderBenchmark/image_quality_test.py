@@ -161,32 +161,34 @@ def run_image_quality_test(general_config: Dict[str, Any], quality_config: Dict[
         return
     
     # Get output directory
-    out_root = Path(general_config["output_root"])
-    out_root.mkdir(exist_ok=True)
-    
+    base_root = Path(general_config["output_root"])
+    out_root = base_root / "quality_test"
+    out_root.mkdir(parents=True, exist_ok=True)
+
     # Load completed tasks
     def load_done(video: Path):
-        done_cache = {"step3": set()}
-        result_file = out_root / f"{video.stem}_step3.jsonl"
+        done_cache = {"quality_test": set()}
+        result_file = out_root / f"{video.stem}_quality_test.jsonl"
         if result_file.exists():
             with open(result_file, 'r') as f:
                 for line in f:
                     data = json.loads(line.strip())
-                    if data.get("step") == "step3":
+                    if data.get("step") == "quality_test":
                         key = (data["encoder"], data.get("pix_fmt"), data.get("vmaf_target"))
-                        done_cache["step3"].add(key)
+                        done_cache["quality_test"].add(key)
         return done_cache
     
-    def _append_result(cfg: Dict[str, Any], src_name: str, step: str, task: EncoderTask, metrics: Dict[str, Any]):
-        result_file = out_root / f"{src_name}_{step}.jsonl"
+    def _append_result(cfg: Dict[str, Any], src_name: str, task: EncoderTask, metrics: Dict[str, Any], vmaf_target: float):
+        result_file = out_root / f"{src_name}_quality_test.jsonl"
         result = {
             "video": src_name,
             "encoder": task.encoder,
             "preset": task.preset,
             "param": task.qparam_name,
             "q": task.qvalue,
-            "step": step,
+            "step": "quality_test",
             "pix_fmt": task.pix_fmt,
+            "vmaf_target": vmaf_target,
             **metrics
         }
         with open(result_file, 'a') as f:
@@ -200,7 +202,7 @@ def run_image_quality_test(general_config: Dict[str, Any], quality_config: Dict[
     targets = quality_config.get("target_vmafs", [90, 95, 99])
     qcontrols = quality_config["quality_controls"]
     
-    # Run quality tests
+    # Run quality tests (formerly step3)
     for enc_name, qcfg in qcontrols.items():
         if run_limit and enc_name.lower() not in run_limit:
             continue
@@ -212,22 +214,21 @@ def run_image_quality_test(general_config: Dict[str, Any], quality_config: Dict[
             target_pix_fmts = find_usable_pixfmts(video, enc_name)
             for pix_fmt in target_pix_fmts:
                 # 检查哪些target已经完成
-                video_step3_done = load_done(video)["step3"]
-                remaining_targets = [t for t in targets if (enc_name, pix_fmt, t) not in video_step3_done]
+                video_done = load_done(video)["quality_test"]
+                remaining_targets = [t for t in targets if (enc_name, pix_fmt, t) not in video_done]
 
                 if not remaining_targets:
                     print(f"[Skip] {video.name} + {enc_name} all targets already completed")
                     continue
 
                 best_dict = _search_multi_targets(
-                    runner, video, out_root, pix_fmt, enc_name, qcfg, remaining_targets, dry_run
+                    runner, video, out_root, enc_name, pix_fmt, qcfg, remaining_targets, dry_run
                 )
                 if dry_run:
                     continue
                 # write results
                 for tv, (task, metrics) in best_dict.items():
-                    _append_result(general_config, video.name, "step3", task,
-                                   metrics | {"vmaf_target": tv})
+                    _append_result(general_config, video.name, task, metrics, tv)
 
 
 def main():
@@ -240,7 +241,7 @@ def main():
     dry_run = general_config.get("dry_run", False)
     debug_encoder_check = general_config.get("debug_encoder_check", False)
     
-    print("=== Image Quality Test (Step3) ===")
+    print("=== Image Quality Test (Quality Test) ===")
     run_image_quality_test(general_config, quality_config, dry_run, debug_encoder_check)
 
 
