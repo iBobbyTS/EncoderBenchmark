@@ -1,5 +1,10 @@
 {
   "presets": {
+    "h264_nvenc": {
+      "method": "preset",
+      "name": "preset",
+      "values": ["p1","p2","p3","p4","p5","p6","p7"]
+    },
     "hevc_nvenc": {
       "method": "preset",
       "name": "preset",
@@ -9,6 +14,11 @@
       "method": "preset",
       "name": "preset",
       "values": ["p1","p2","p3","p4","p5","p6","p7"]
+    },
+    "libx264": {
+      "method": "preset",
+      "name": "preset",
+      "values": ["placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast"]
     },
     "libx265": {
       "method": "preset",

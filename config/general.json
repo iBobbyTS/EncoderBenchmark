@@ -6,7 +6,7 @@
   "vmaf_model": "model=version=vmaf_4k_v0.6.1",
   "dry_run": false,
   "debug_encoder_check": false,
-  "run_encoders": ["h264_videotoolbox", "hevc_videotoolbox"],
+  "run_encoders": ["h264_nvenc", "hevc_nvenc", "av1_nvenc", "libx265", "libx264", "libaom-av1", "libsvtav1"],
   "threading_rules": {
     "libx264": ["-x264-params", "threads={threads}"],
     "libx265": ["-x265-params", "pools={threads}"],
@@ -29,9 +29,9 @@
     "hevc_videotoolbox": ["yuv420p10le", "yuv420p"]
   },
   "encoders": {
-    "software_encoders": ["libaom-av1", "librav1e", "libsvtav1", "libx265"],
-    "macos_encoders":    ["hevc_videotoolbox"],
-    "nvidia_encoders":   ["hevc_nvenc", "av1_nvenc"],
+    "software_encoders": ["libaom-av1", "librav1e", "libsvtav1", "libx265", "libx264"],
+    "macos_encoders":    ["hevc_videotoolbox", "h264_videotoolbox"],
+    "nvidia_encoders":   ["hevc_nvenc", "av1_nvenc", "h264_nvenc"],
     "amd_encoders":      [],
     "intel_encoders":    []
   }
